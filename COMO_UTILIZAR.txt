@@ -1,0 +1,44 @@
+============================================================
+       MANUAL DE UTILIZAÇÃO - GERADOR DE ESCALA 6X1
+============================================================
+
+Este sistema foi criado para facilitar a escala de folgas do açougue.
+Ele funciona como um Aplicativo (PWA) e pode ser instalado no celular.
+
+1. COMO INSTALAR NO CELULAR:
+---------------------------------
+Para usar como App, você deve hospedar os arquivos (ex: GitHub Pages):
+- No Android (Chrome): Acesse o link, toque nos 3 pontinhos e "Instalar Aplicativo".
+- No iPhone (Safari): Acesse o link, toque em "Compartilhar" e "Adicionar à Tela de Início".
+
+2. COMO CADASTRAR UM COLABORADOR:
+---------------------------------
+No formulário lateral "Novo Colaborador":
+- NOME: Digite o nome completo do funcionário.
+- FOLGA FIXA: Escolha o dia da semana que ele SEMPRE folga.
+- REF. DOMINGO: Informe a data do ÚLTIMO DOMINGO que ele folgou. 
+  (Essa data é fundamental para o sistema calcular o rodízio 2x1).
+
+3. FUNCIONALIDADES ESPECIAIS:
+---------------------------------
+- MODO ESCURO: Clique no ícone da Lua/Sol no topo para mudar o visual.
+- BACKUP: Use os botões de EXPORTAR/IMPORTAR para salvar sua equipe em um arquivo 
+  e não perder os dados se trocar de celular ou limpar o navegador.
+- DESTAQUE "HOJE": O dia atual fica sempre marcado em azul no calendário.
+
+4. COMO FUNCIONA A LÓGICA DE FOLGAS:
+------------------------------------
+- FOLGA FIXA: Marcada automaticamente toda semana.
+- FOLGA DOMINGO: 1 domingo de folga para cada 2 trabalhados (escala 2x1).
+- CONFLITO: Se a folga de domingo cair na mesma semana da fixa, o sistema
+  mostrará "FOLGA" em ambos os dias (Amarelo na tabela).
+
+5. IMPRESSÃO E PDF:
+-------------------
+Clique em "Imprimir Escala" para gerar um documento limpo com:
+- Tabela 1: Resumo de folgas por funcionário.
+- Tabela 2: Escala dedicada de domingos.
+
+------------------------------------------------------------
+Sistema desenvolvido por: LUAN
+============================================================

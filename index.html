@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Escala - Açougue</title>
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
+    <link rel="apple-touch-icon" href="logo.svg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.js"></script>
+    <style>
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+        .dark {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+        body { 
+            background-color: var(--bg-body); 
+            color: var(--text-main); 
+            transition: background-color 0.3s, color 0.3s; 
+        }
+        .bg-card { background-color: var(--bg-card) !important; color: var(--text-main) !important; border-color: var(--border-color) !important; }
+        .text-muted { color: var(--text-muted) !important; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; padding: 0; margin: 0; }
+            .print-only { display: block !important; }
+            table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 30px; }
+            th, td { border: 1px solid #000 !important; padding: 8px !important; text-align: left; font-size: 12px; }
+            th { background-color: #f3f4f6 !important; }
+            .print-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px; }
+        }
+        .print-only { display: none; }
+        .bg-fixed { background-color: #dcfce7 !important; color: #166534 !important; } 
+        .bg-sunday { background-color: #dbeafe !important; color: #1e40af !important; } 
+        .bg-double { background-color: #fef9c3 !important; color: #854d0e !important; border: 1px solid #eab308 !important; } 
+        .sticky-col { position: sticky; left: 0; background: var(--bg-card); z-index: 10; border-right: 2px solid var(--border-color); }
+        
+        .today-column { 
+            background-color: #eff6ff !important; 
+            border-left: 2px solid #3b82f6 !important; 
+            border-right: 2px solid #3b82f6 !important;
+            position: relative;
+        }
+        .today-column::after {
+            content: "HOJE";
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            font-weight: 900;
+            color: #3b82f6;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body class="font-sans">
+
+    <!-- SEÇÃO EXCLUSIVA PARA IMPRESSÃO -->
+    <div class="print-only p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold uppercase">Escala de Folgas - Açougue</h1>
+            <h2 id="printMonthYear" class="text-xl font-bold text-slate-600"></h2>
+        </div>
+
+        <div class="print-title">1. RESUMO DE FOLGAS POR COLABORADOR</div>
+        <table id="printTableResumo">
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Colaborador</th>
+                    <th>Dias de Folga no Mês</th>
+                </tr>
+            </thead>
+            <tbody id="printResumoBody"></tbody>
+        </table>
+
+        <div class="print-title">2. ESCALA DE DOMINGOS</div>
+        <table id="printTableDomingos">
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Domingo (Dia)</th>
+                    <th>Quem Folga</th>
+                </tr>
+            </thead>
+            <tbody id="printDomingosBody"></tbody>
+        </table>
+    </div>
+
+    <div class="max-w-[1600px] mx-auto p-4 md:p-6">
+        
+        <!-- Header -->
+        <header class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
+            <div>
+                <h1 class="text-3xl font-black tracking-tight uppercase">GERADOR DE <span class="text-blue-600">ESCALA</span></h1>
+                <p class="text-muted font-medium">Controle de Folgas 6x1 Automatizado</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="toggleDarkMode()" class="p-2 rounded-xl border border-slate-300 bg-card hover:opacity-80 transition shadow-sm">
+                    <i data-lucide="moon" id="themeIcon" class="w-5 h-5"></i>
+                </button>
+                <button onclick="window.print()" class="bg-card border border-slate-300 hover:opacity-80 px-4 py-2 rounded-xl flex items-center gap-2 transition shadow-sm font-bold">
+                    <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Escala
+                </button>
+            </div>
+        </header>
+
+        <!-- DASHBOARD RÁPIDO -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 no-print">
+            <div class="p-5 rounded-2xl shadow-sm border bg-card">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="p-2 bg-green-100 rounded-lg text-green-600"><i data-lucide="users"></i></div>
+                    <span class="text-muted font-bold uppercase text-xs">Total Equipe</span>
+                </div>
+                <div id="countTotal" class="text-3xl font-black">0</div>
+            </div>
+            <div class="p-5 rounded-2xl shadow-sm border border-l-4 border-l-blue-500 bg-card">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="p-2 bg-blue-100 rounded-lg text-blue-600"><i data-lucide="palm-tree"></i></div>
+                    <span class="text-muted font-bold uppercase text-xs">De Folga Hoje</span>
+                </div>
+                <div id="countOffToday" class="text-3xl font-black">0</div>
+                <div id="namesOffToday" class="text-xs text-blue-600 font-bold mt-1 truncate">Ninguém de folga hoje</div>
+            </div>
+            <div class="p-5 rounded-2xl shadow-sm border bg-card">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="p-2 bg-amber-100 rounded-lg text-amber-600"><i data-lucide="calendar"></i></div>
+                    <span class="text-muted font-bold uppercase text-xs">Data Atual</span>
+                </div>
+                <div id="currentDateDisplay" class="text-xl font-black">--/--/----</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+            
+            <aside class="xl:col-span-1 space-y-6 no-print">
+                <section class="bg-card p-6 rounded-2xl shadow-sm border">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 id="formTitle" class="text-lg font-black">Novo Colaborador</h2>
+                        <button id="cancelEdit" class="hidden text-xs text-red-500 font-bold underline" onclick="resetForm()">Cancelar</button>
+                    </div>
+                    
+                    <form id="setupForm" class="space-y-4">
+                        <input type="hidden" id="editId">
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-slate-400 mb-1">Nome Completo</label>
+                            <input type="text" id="empName" required class="w-full rounded-xl border-slate-200 bg-slate-50 dark:bg-slate-900 focus:ring-blue-500 p-3 border font-semibold text-slate-900 dark:text-white">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-black uppercase text-slate-400 mb-1">Folga Fixa</label>
+                                <select id="empFixedDay" class="w-full rounded-xl border-slate-200 bg-slate-50 dark:bg-slate-900 p-3 border font-semibold text-sm text-slate-900 dark:text-white">
+                                    <option value="1">Segunda</option>
+                                    <option value="2">Terça</option>
+                                    <option value="3">Quarta</option>
+                                    <option value="4">Quinta</option>
+                                    <option value="5">Sexta</option>
+                                    <option value="6">Sábado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black uppercase text-slate-400 mb-1">Ref. Domingo</label>
+                                <input type="date" id="empRefDate" required class="w-full rounded-xl border-slate-200 bg-slate-50 dark:bg-slate-900 p-3 border font-semibold text-xs text-slate-900 dark:text-white">
+                            </div>
+                        </div>
+                        <button type="submit" id="submitBtn" class="w-full bg-slate-800 hover:bg-black text-white font-black py-3 rounded-xl transition shadow-lg shadow-slate-200">
+                            SALVAR NA EQUIPE
+                        </button>
+                    </form>
+                </section>
+
+                <section class="bg-card p-6 rounded-2xl shadow-sm border">
+                    <h2 class="text-lg font-black mb-4">Minha Equipe</h2>
+                    <div id="staffList" class="space-y-2 max-h-[400px] overflow-y-auto pr-2"></div>
+                </section>
+
+                <!-- SEÇÃO DE BACKUP -->
+                <section class="bg-card p-6 rounded-2xl shadow-sm border no-print">
+                    <h2 class="text-lg font-black mb-4 flex items-center gap-2">
+                        <i data-lucide="save" class="w-5 h-5 text-blue-600"></i>
+                        Backup
+                    </h2>
+                    <div class="grid grid-cols-1 gap-2">
+                        <button onclick="exportData()" class="flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-2.5 rounded-xl transition border border-blue-200">
+                            <i data-lucide="download" class="w-4 h-4"></i> Exportar Dados
+                        </button>
+                        <button onclick="document.getElementById('fileInput').click()" class="flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl transition border border-slate-200">
+                            <i data-lucide="upload" class="w-4 h-4"></i> Importar Dados
+                        </button>
+                        <input type="file" id="fileInput" class="hidden" accept=".json" onchange="importData(event)">
+                    </div>
+                </section>
+            </aside>
+
+            <main class="xl:col-span-3 space-y-6">
+                
+                <div class="p-4 rounded-2xl shadow-sm border flex flex-wrap gap-4 items-center justify-between no-print bg-card">
+                    <div class="flex items-center gap-3">
+                        <label class="text-sm font-black uppercase tracking-tighter">Mês de Referência:</label>
+                        <select id="monthFilter" onchange="renderAll()" class="rounded-xl border-slate-200 font-bold p-2 border bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"></select>
+                    </div>
+                    <div class="flex gap-4 text-[10px] font-black uppercase tracking-wider">
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-fixed border border-green-200"></span> Fixa</div>
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-sunday border border-blue-200"></span> Domingo</div>
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-double border border-amber-200"></span> 2 Folgas</div>
+                    </div>
+                </div>
+
+                <div id="calendarContainer" class="rounded-2xl shadow-sm border overflow-hidden bg-card"></div>
+
+                <div class="bg-slate-800 p-5 rounded-2xl text-white no-print">
+                    <div class="flex gap-4 items-center">
+                        <div class="bg-slate-700 p-3 rounded-xl"><i data-lucide="database" class="text-blue-400"></i></div>
+                        <div>
+                            <h4 class="font-black uppercase text-sm">Banco de Dados Ativo</h4>
+                            <p class="text-slate-400 text-xs">Todas as alterações são salvas automaticamente neste navegador.</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <footer class="mt-12 py-8 border-t border-slate-200 text-center no-print">
+            <p class="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Sistema de Gestão de Escala • Criado por <span class="text-slate-900 dark:text-slate-100">LUAN</span></p>
+        </footer>
+    </div>
+
+    <script>
+        // --- GERENCIAMENTO DE DADOS ---
+        let db = JSON.parse(localStorage.getItem('acougue_db_v2')) || [];
+        const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+        // --- DARK MODE ---
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark);
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const icon = document.getElementById('themeIcon');
+            if (document.documentElement.classList.contains('dark')) {
+                icon.setAttribute('data-lucide', 'sun');
+            } else {
+                icon.setAttribute('data-lucide', 'moon');
+            }
+            lucide.createIcons();
+        }
+
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.documentElement.classList.add('dark');
+        }
+
+        function getOffDates(employee, year, month) {
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const results = [];
+            const refDate = new Date(employee.refDate + 'T00:00:00');
+            refDate.setHours(0,0,0,0);
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const currentDate = new Date(year, month, d);
+                currentDate.setHours(0,0,0,0);
+                const dayOfWeek = currentDate.getDay();
+                const isFixed = (dayOfWeek === employee.fixedDay);
+                let isSunOff = false;
+                if (dayOfWeek === 0) {
+                    const diffTime = currentDate - refDate;
+                    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                    const weeksDiff = diffDays / 7;
+                    if (weeksDiff % 3 === 0) isSunOff = true;
+                }
+                if (isFixed && isSunOff) results.push({ day: d, type: 'double' });
+                else if (isFixed) results.push({ day: d, type: 'fixed' });
+                else if (isSunOff) results.push({ day: d, type: 'sunday' });
+            }
+            return results;
+        }
+
+        function updateDashboard() {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            
+            const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+            document.getElementById('currentDateDisplay').textContent = formattedDate;
+            document.getElementById('countTotal').textContent = db.length;
+
+            const namesOff = [];
+            db.forEach(emp => {
+                const dayOfWeek = today.getDay();
+                let isOff = (dayOfWeek === emp.fixedDay);
+                if (dayOfWeek === 0) {
+                    const refDate = new Date(emp.refDate + 'T00:00:00');
+                    refDate.setHours(0,0,0,0);
+                    const diffTime = today - refDate;
+                    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                    if ((diffDays / 7) % 3 === 0) isOff = true;
+                }
+                if (isOff) namesOff.push(emp.name);
+            });
+            document.getElementById('countOffToday').textContent = namesOff.length;
+            document.getElementById('namesOffToday').textContent = namesOff.length > 0 ? namesOff.join(', ') : 'Ninguém de folga hoje';
+        }
+
+        function renderAll() {
+            renderStaffList();
+            renderCalendar();
+            updateDashboard();
+            updateThemeIcon();
+            lucide.createIcons();
+        }
+
+        function renderStaffList() {
+            const list = document.getElementById('staffList');
+            list.innerHTML = '';
+            db.forEach(emp => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-3 border rounded-xl bg-card';
+                div.innerHTML = `
+                    <div class="overflow-hidden"><p class="font-black text-sm truncate">${emp.name}</p></div>
+                    <div class="flex gap-1">
+                        <button onclick="editEmployee(${emp.id})" class="p-1.5 text-blue-600 border border-blue-100 rounded-lg"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                        <button onclick="deleteEmployee(${emp.id})" class="p-1.5 text-red-600 border border-red-100 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>`;
+                list.appendChild(div);
+            });
+        }
+
+        function renderCalendar() {
+            const container = document.getElementById('calendarContainer');
+            if (!db.length) { container.innerHTML = '<div class="p-20 text-center font-bold text-slate-300 uppercase">SEM DADOS</div>'; return; }
+
+            const [year, month] = document.getElementById('monthFilter').value.split('-').map(Number);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+            document.getElementById('printMonthYear').textContent = `${monthNames[month]} / ${year}`;
+            const resBody = document.getElementById('printResumoBody');
+            const domBody = document.getElementById('printDomingosBody');
+            resBody.innerHTML = ''; domBody.innerHTML = '';
+
+            const domingosNoMes = [];
+            for (let d = 1; d <= daysInMonth; d++) { if (new Date(year, month, d).getDay() === 0) domingosNoMes.push({ day: d, names: [] }); }
+
+            let html = '<div class="overflow-x-auto no-print"><table class="w-full text-center border-collapse"><thead><tr class="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700"><th class="sticky-col p-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[180px]">Colaborador</th>';
+            for (let d = 1; d <= daysInMonth; d++) {
+                const isSun = new Date(year, month, d).getDay() === 0;
+                const isToday = isCurrentMonth && today.getDate() === d;
+                html += `<th class="p-2 border-l border-slate-100 dark:border-slate-700 min-w-[45px] ${isSun ? 'bg-slate-100 dark:bg-slate-900' : ''} ${isToday ? 'today-column' : ''}"><span class="block text-[9px] text-slate-400 font-black uppercase">${dayNames[new Date(year, month, d).getDay()]}</span><span class="text-sm font-black">${d}</span></th>`;
+            }
+            html += '</tr></thead><tbody>';
+
+            db.forEach(emp => {
+                const offs = getOffDates(emp, year, month);
+                resBody.innerHTML += `<tr><td><b>${emp.name}</b></td><td>${offs.map(o => o.day).join(', ')}</td></tr>`;
+                html += `<tr class="border-b border-slate-50 dark:border-slate-800 group"><td class="sticky-col p-4 text-left font-black text-sm whitespace-nowrap">${emp.name}</td>`;
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const off = offs.find(o => o.day === d);
+                    const isToday = isCurrentMonth && today.getDate() === d;
+                    let cellClass = off ? (off.type === 'fixed' ? 'bg-fixed' : (off.type === 'sunday' ? 'bg-sunday' : 'bg-double')) : '';
+                    if (off && (off.type === 'sunday' || off.type === 'double')) { const sun = domingosNoMes.find(s => s.day === d); if (sun) sun.names.push(emp.name); }
+                    html += `<td class="p-1 border-l border-slate-100 dark:border-slate-700 text-[8px] font-black leading-tight ${cellClass} ${isToday ? 'today-column' : ''}">${off ? 'FOLGA' : ''}</td>`;
+                }
+                html += '</tr>';
+            });
+            domingosNoMes.forEach(sun => { domBody.innerHTML += `<tr><td><b style="font-size: 14px;">${sun.day}</b></td><td>${sun.names.join(', ') || 'Ninguém'}</td></tr>`; });
+            container.innerHTML = html + '</tbody></table></div>';
+        }
+
+        const form = document.getElementById('setupForm');
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('editId').value;
+            const data = { id: editId ? parseInt(editId) : Date.now(), name: document.getElementById('empName').value, fixedDay: parseInt(document.getElementById('empFixedDay').value), refDate: document.getElementById('empRefDate').value };
+            if (editId) db = db.map(e => e.id === data.id ? data : e); else db.push(data);
+            localStorage.setItem('acougue_db_v2', JSON.stringify(db));
+            resetForm(); renderAll();
+        };
+
+        function resetForm() { form.reset(); document.getElementById('editId').value = ''; document.getElementById('formTitle').textContent = 'Novo Colaborador'; document.getElementById('submitBtn').textContent = 'SALVAR NA EQUIPE'; document.getElementById('cancelEdit').classList.add('hidden'); }
+        function editEmployee(id) {
+            const emp = db.find(e => e.id === id); if (!emp) return;
+            document.getElementById('editId').value = emp.id; document.getElementById('empName').value = emp.name; document.getElementById('empFixedDay').value = emp.fixedDay; document.getElementById('empRefDate').value = emp.refDate;
+            document.getElementById('formTitle').textContent = 'Editando: ' + emp.name; document.getElementById('cancelEdit').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        function deleteEmployee(id) { 
+            const emp = db.find(e => e.id === id);
+            if (emp && confirm(`Deseja realmente remover o colaborador "${emp.name}" do sistema?`)) { 
+                db = db.filter(e => e.id !== id); 
+                localStorage.setItem('acougue_db_v2', JSON.stringify(db)); 
+                renderAll(); 
+            } 
+        }
+
+        // --- FUNÇÕES DE BACKUP ---
+        function exportData() {
+            if (db.length === 0) { alert("Não há dados para exportar."); return; }
+            const blob = new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `backup_escala_${new Date().toISOString().slice(0,10)}.json`; a.click();
+        }
+        function importData(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedDb = JSON.parse(e.target.result);
+                    if (Array.isArray(importedDb) && confirm("Isso irá substituir sua equipe atual. Deseja continuar?")) {
+                        db = importedDb; localStorage.setItem('acougue_db_v2', JSON.stringify(db)); renderAll();
+                    }
+                } catch (err) { alert("Erro ao ler o arquivo de backup."); }
+            };
+            reader.readAsText(file);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const select = document.getElementById('monthFilter'); const now = new Date();
+            for (let i = 0; i < 6; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                const opt = document.createElement('option'); opt.value = `${d.getFullYear()}-${d.getMonth()}`; opt.textContent = `${monthNames[d.getMonth()]} / ${d.getFullYear()}`;
+                select.appendChild(opt);
+            }
+                        renderAll();
+                    });
+            
+                    // --- REGISTRO DO PWA (SERVICE WORKER) ---
+                    if ('serviceWorker' in navigator) {
+                        window.addEventListener('load', () => {
+                            navigator.serviceWorker.register('./sw.js')
+                                .then(reg => console.log('App instalado com sucesso:', reg.scope))
+                                .catch(err => console.log('Falha na instalação:', err));
+                        });
+                    }
+                </script>
+            </body>
+            </html>
+            
